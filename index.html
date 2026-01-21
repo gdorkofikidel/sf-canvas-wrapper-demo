@@ -62,6 +62,7 @@
 
       // Subscribe to filtered results from Salesforce
       canvasClient.subscribe("filteredResults", function(event) {
+        console.log('[Wrapper] Received filteredResults from Salesforce:', event.payload);
         document.getElementById("loadingMsg").style.display = "none";
         render(event.payload);
       });
@@ -85,27 +86,27 @@
       const term = document.getElementById("searchInput").value.toLowerCase();
 
       const results = DATA.filter(
-        r => r.name.toLowerCase().includes(term) || r.type.toLowerCase().includes(term)
+        r =>
+          r.name.toLowerCase().includes(term) ||
+          r.type.toLowerCase().includes(term)
       );
 
-      // Hide previous results
-      document.getElementById("resultsTable").style.display = "none";
+      console.log('[Wrapper] Search results (local filter by term only):', results);
 
       if (!canvasClient) {
-        // Canvas not ready yet → store search results, show in browser for testing
         lastSearchResults = results;
-        render(results);
-        console.warn("Canvas not ready, will send to Salesforce when initialized");
+        render(results); // shows something in browser
+        console.warn("[Wrapper] Canvas not ready yet");
         return;
       }
 
-      // Show loading indicator while waiting for Salesforce filtered results
       document.getElementById("loadingMsg").style.display = "block";
 
       sendResultsToSalesforce(results);
     }
 
     function sendResultsToSalesforce(results) {
+      console.log('[Wrapper] Sending to Salesforce via Canvas:', results);
       if (!canvasClient) return;
 
       canvasClient.publish({
