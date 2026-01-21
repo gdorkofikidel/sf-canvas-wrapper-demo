@@ -33,7 +33,7 @@
 
   <input id="searchInput" placeholder="Search..." />
   <button onclick="search()">Search</button>
-
+  <p id="loadingMsg" style="display:none;">Waiting for filtered results...</p>
   <table id="resultsTable" style="display:none;">
     <thead>
       <tr>
@@ -71,9 +71,18 @@
           r.type.toLowerCase().includes(term)
       );
 
-      // 👇 Instead of rendering, send to Salesforce
+      document.getElementById("resultsTable").style.display = "none";
+      document.getElementById("loadingMsg").style.display = "block";
+
       sendResultsToSalesforce(results);
     }
+
+    window.addEventListener("message", (event) => {
+      if (event.data?.name === "filteredResults") {
+        document.getElementById("loadingMsg").style.display = "none";
+        render(event.data.payload);
+      }
+    });
 
     function sendResultsToSalesforce(results) {
       if (!canvasClient) {
