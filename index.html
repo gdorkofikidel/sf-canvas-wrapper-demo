@@ -25,6 +25,11 @@
       border: 1px solid #ccc;
       padding: 8px;
     }
+    #loadingMsg {
+      margin-top: 10px;
+      font-style: italic;
+      color: #555;
+    }
   </style>
 </head>
 <body>
@@ -34,6 +39,7 @@
   <input id="searchInput" placeholder="Search..." />
   <button onclick="search()">Search</button>
   <p id="loadingMsg" style="display:none;">Waiting for filtered results...</p>
+
   <table id="resultsTable" style="display:none;">
     <thead>
       <tr>
@@ -44,87 +50,88 @@
     </thead>
     <tbody></tbody>
   </table>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/salesforce-canvas/27.0/canvas-all.min.js"></script>
   <script>
-   let canvasClient = null;
+    let canvasClient = null;
+    let lastSearchResults = [];
 
-  // Store the latest search results
-  let lastSearchResults = [];
+    // Canvas SDK initialization
+    Sfdc.canvas(function() {
+      canvasClient = Sfdc.canvas.client();
 
-  Sfdc.canvas(function () {
-    canvasClient = Sfdc.canvas.client();
-    
-    // Subscribe to filtered results
-    canvasClient.subscribe(
-      "filteredResults",
-      function(event) {
+      // Subscribe to filtered results from Salesforce
+      canvasClient.subscribe("filteredResults", function(event) {
+        document.getElementById("loadingMsg").style.display = "none";
         render(event.payload);
+      });
+
+      // If search was done before Canvas ready, send now
+      if (lastSearchResults.length) {
+        sendResultsToSalesforce(lastSearchResults);
+        lastSearchResults = [];
       }
-    );
-  });
-
-  const DATA = [
-    { name: "XPlace", type: "Restaurant", wired: true },
-    { name: "Del", type: "Company", wired: true },
-    { name: "Tata", type: "Restaurant", wired: false },
-    { name: "XXX", type: "Bar", wired: true },
-    { name: "Restaurant", type: "Bar", wired: false }
-  ];
-
-  function search() {
-    const term = document.getElementById("searchInput").value.toLowerCase();
-
-    const results = DATA.filter(
-      r =>
-        r.name.toLowerCase().includes(term) ||
-        r.type.toLowerCase().includes(term)
-    );
-
-    if (!canvasClient) {
-      // Canvas not ready → store results temporarily, render for browser testing
-      lastSearchResults = results;
-      render(results); // show something in browser
-      console.warn("Canvas not ready yet, will send when initialized");
-      return;
-    }
-
-    sendResultsToSalesforce(results);
-  }
-
-  function sendResultsToSalesforce(results) {
-    Sfdc.canvas.client.publish(canvasClient, {
-      name: "searchResults",
-      payload: results
-    });
-  }
-
-  // Listen for filtered results from Salesforce
-  window.addEventListener("message", (event) => {
-    // Optional: validate event.origin here for production
-    if (event.data?.name === "filteredResults") {
-      render(event.data.payload);
-    }
-  });
-
-  function render(rows) {
-    const table = document.getElementById("resultsTable");
-    const body = table.querySelector("tbody");
-    body.innerHTML = "";
-
-    rows.forEach(r => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${r.name}</td>
-        <td>${r.type}</td>
-        <td>${r.wired}</td>
-      `;
-      body.appendChild(tr);
     });
 
-    table.style.display = rows.length ? "table" : "none";
-  }
+    const DATA = [
+      { name: "XPlace", type: "Restaurant", wired: true },
+      { name: "Del", type: "Company", wired: true },
+      { name: "Tata", type: "Restaurant", wired: false },
+      { name: "XXX", type: "Bar", wired: true },
+      { name: "Restaurant", type: "Bar", wired: false }
+    ];
+
+    function search() {
+      const term = document.getElementById("searchInput").value.toLowerCase();
+
+      const results = DATA.filter(
+        r => r.name.toLowerCase().includes(term) || r.type.toLowerCase().includes(term)
+      );
+
+      // Hide previous results
+      document.getElementById("resultsTable").style.display = "none";
+
+      if (!canvasClient) {
+        // Canvas not ready yet → store search results, show in browser for testing
+        lastSearchResults = results;
+        render(results);
+        console.warn("Canvas not ready, will send to Salesforce when initialized");
+        return;
+      }
+
+      // Show loading indicator while waiting for Salesforce filtered results
+      document.getElementById("loadingMsg").style.display = "block";
+
+      sendResultsToSalesforce(results);
+    }
+
+    function sendResultsToSalesforce(results) {
+      if (!canvasClient) return;
+
+      canvasClient.publish({
+        name: "searchResults",
+        payload: results
+      });
+    }
+
+    function render(rows) {
+      const table = document.getElementById("resultsTable");
+      const body = table.querySelector("tbody");
+      body.innerHTML = "";
+
+      rows.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.name}</td>
+          <td>${r.type}</td>
+          <td>${r.wired}</td>
+        `;
+        body.appendChild(tr);
+      });
+
+      table.style.display = rows.length ? "table" : "none";
+    }
   </script>
-
 
 </body>
 </html>
