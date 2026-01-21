@@ -53,13 +53,14 @@
 
   Sfdc.canvas(function () {
     canvasClient = Sfdc.canvas.client();
-    console.log("Canvas initialized");
-
-    // If user searched before Canvas was ready, send now
-    if (lastSearchResults.length) {
-      sendResultsToSalesforce(lastSearchResults);
-      lastSearchResults = [];
-    }
+    
+    // Subscribe to filtered results
+    canvasClient.subscribe(
+      "filteredResults",
+      function(event) {
+        render(event.payload);
+      }
+    );
   });
 
   const DATA = [
