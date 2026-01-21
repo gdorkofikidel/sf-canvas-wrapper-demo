@@ -77,9 +77,8 @@
 
     function sendResultsToSalesforce(results) {
       if (!canvasClient) {
-        console.warn("Canvas not ready, rendering locally");
-        render(results);
-        return;
+        console.warn("Canvas not ready, results not sent to Salesforce yet");
+        return; // skip rendering
       }
 
       Sfdc.canvas.client.publish(canvasClient, {
