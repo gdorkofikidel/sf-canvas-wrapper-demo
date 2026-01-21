@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Canvas Wrapper Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    input {
+      padding: 8px;
+      width: 250px;
+    }
+    button {
+      padding: 8px 12px;
+      margin-left: 5px;
+    }
+    table {
+      margin-top: 20px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>External App (Mock)</h2>
+
+  <input id="searchInput" placeholder="Search..." />
+  <button onclick="search()">Search</button>
+
+  <table id="resultsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Wired</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const DATA = [
+      { name: "XPlace", type: "Restaurant", wired: true },
+      { name: "Del", type: "Company", wired: true },
+      { name: "Tata", type: "Restaurant", wired: false },
+      { name: "XXX", type: "Bar", wired: true },
+      { name: "Restaurant", type: "Bar", wired: false }
+    ];
+
+    function search() {
+      const term = document.getElementById("searchInput").value.toLowerCase();
+      const results = DATA.filter(
+        r =>
+          r.name.toLowerCase().includes(term) ||
+          r.type.toLowerCase().includes(term)
+      );
+
+      render(results);
+    }
+
+    function render(rows) {
+      const table = document.getElementById("resultsTable");
+      const body = table.querySelector("tbody");
+      body.innerHTML = "";
+
+      rows.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.name}</td>
+          <td>${r.type}</td>
+          <td>${r.wired}</td>
+        `;
+        body.appendChild(tr);
+      });
+
+      table.style.display = rows.length ? "table" : "none";
+    }
+  </script>
+
+</body>
+</html>
