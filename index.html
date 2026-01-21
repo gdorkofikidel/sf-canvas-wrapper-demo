@@ -46,80 +46,82 @@
   </table>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/salesforce-canvas/27.0/canvas-all.min.js"></script>
   <script>
-    let canvasClient = null;
+   let canvasClient = null;
 
-    // Canvas initialization
-    Sfdc.canvas(function () {
-      canvasClient = Sfdc.canvas.client();
-      console.log("Canvas initialized");
-    });
+  // Store the latest search results
+  let lastSearchResults = [];
 
-    const DATA = [
-      { name: "XPlace", type: "Restaurant", wired: true },
-      { name: "Del", type: "Company", wired: true },
-      { name: "Tata", type: "Restaurant", wired: false },
-      { name: "XXX", type: "Bar", wired: true },
-      { name: "Restaurant", type: "Bar", wired: false }
-    ];
+  Sfdc.canvas(function () {
+    canvasClient = Sfdc.canvas.client();
+    console.log("Canvas initialized");
 
-    function search() {
-      const term = document.getElementById("searchInput").value.toLowerCase();
+    // If user searched before Canvas was ready, send now
+    if (lastSearchResults.length) {
+      sendResultsToSalesforce(lastSearchResults);
+      lastSearchResults = [];
+    }
+  });
 
-      const results = DATA.filter(
-        r =>
-          r.name.toLowerCase().includes(term) ||
-          r.type.toLowerCase().includes(term)
-      );
+  const DATA = [
+    { name: "XPlace", type: "Restaurant", wired: true },
+    { name: "Del", type: "Company", wired: true },
+    { name: "Tata", type: "Restaurant", wired: false },
+    { name: "XXX", type: "Bar", wired: true },
+    { name: "Restaurant", type: "Bar", wired: false }
+  ];
 
-      document.getElementById("resultsTable").style.display = "none";
-      document.getElementById("loadingMsg").style.display = "block";
+  function search() {
+    const term = document.getElementById("searchInput").value.toLowerCase();
 
-      sendResultsToSalesforce(results);
+    const results = DATA.filter(
+      r =>
+        r.name.toLowerCase().includes(term) ||
+        r.type.toLowerCase().includes(term)
+    );
+
+    if (!canvasClient) {
+      // Canvas not ready → store results temporarily, render for browser testing
+      lastSearchResults = results;
+      render(results); // show something in browser
+      console.warn("Canvas not ready yet, will send when initialized");
+      return;
     }
 
-    window.addEventListener("message", (event) => {
-      if (event.data?.name === "filteredResults") {
-        document.getElementById("loadingMsg").style.display = "none";
-        render(event.data.payload);
-      }
+    sendResultsToSalesforce(results);
+  }
+
+  function sendResultsToSalesforce(results) {
+    Sfdc.canvas.client.publish(canvasClient, {
+      name: "searchResults",
+      payload: results
+    });
+  }
+
+  // Listen for filtered results from Salesforce
+  window.addEventListener("message", (event) => {
+    // Optional: validate event.origin here for production
+    if (event.data?.name === "filteredResults") {
+      render(event.data.payload);
+    }
+  });
+
+  function render(rows) {
+    const table = document.getElementById("resultsTable");
+    const body = table.querySelector("tbody");
+    body.innerHTML = "";
+
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${r.name}</td>
+        <td>${r.type}</td>
+        <td>${r.wired}</td>
+      `;
+      body.appendChild(tr);
     });
 
-    function sendResultsToSalesforce(results) {
-      if (!canvasClient) {
-        console.warn("Canvas not ready, results not sent to Salesforce yet");
-        return; // skip rendering
-      }
-
-      Sfdc.canvas.client.publish(canvasClient, {
-        name: "searchResults",
-        payload: results
-      });
-    }
-
-    // 👇 Listen for filtered results coming back
-    window.addEventListener("message", (event) => {
-      if (event.data?.name === "filteredResults") {
-        render(event.data.payload);
-      }
-    });
-
-    function render(rows) {
-      const table = document.getElementById("resultsTable");
-      const body = table.querySelector("tbody");
-      body.innerHTML = "";
-
-      rows.forEach(r => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${r.name}</td>
-          <td>${r.type}</td>
-          <td>${r.wired}</td>
-        `;
-        body.appendChild(tr);
-      });
-
-      table.style.display = rows.length ? "table" : "none";
-    }
+    table.style.display = rows.length ? "table" : "none";
+  }
   </script>
 
 
